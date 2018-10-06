@@ -3,6 +3,8 @@ package com.example.muhammadfaizan.googlemapsdemo;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -13,6 +15,9 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -25,6 +30,10 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     boolean permission_granted = false;
@@ -35,11 +44,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private String[] mPermission = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
     private FusedLocationProviderClient mlProvider;
     private static float ZOOM = 15f;
+    private EditText edtSearch;
+    private ImageView imgSearch;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.map_activity);
+        initViews();
         permissionCheck();
     }
 
@@ -89,6 +101,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         Toast.makeText(this, "Map ready", Toast.LENGTH_LONG).show();
+        goTOLocation();
     }
 
     private void getDeviceLocation() {
@@ -115,5 +128,37 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(false);
+    }
+
+    private void goTOLocation() {
+        imgSearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (edtSearch.getText().toString().trim().equals("") || edtSearch.getText().toString().trim().length() == 0) {
+                    Toast.makeText(MapActivity.this, "Please enter a name to search", Toast.LENGTH_LONG).show();
+                } else {
+                    String location = edtSearch.getText().toString().trim();
+                    Geocoder geocoder = new Geocoder(MapActivity.this);
+                    List<Address> locationList = new ArrayList<>();
+                    edtSearch.setText("");
+                    edtSearch.setHint("Enter city, business or zip");
+
+                    try {
+                        locationList = geocoder.getFromLocationName(location, 1);
+                        if (locationList.size() > 0) {
+                            Address address = locationList.get(0);
+                            Log.e("faizan", address.toString());
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+
+    private void initViews() {
+        edtSearch = findViewById(R.id.edtLoicationName);
+        imgSearch = findViewById(R.id.imgSearch);
     }
 }
