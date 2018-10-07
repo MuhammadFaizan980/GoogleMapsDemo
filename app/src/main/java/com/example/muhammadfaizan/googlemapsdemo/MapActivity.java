@@ -27,6 +27,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
@@ -46,6 +47,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private static float ZOOM = 15f;
     private EditText edtSearch;
     private ImageView imgSearch;
+    private ImageView imgMyLocation;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -112,8 +114,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             @Override
             public void onComplete(@NonNull Task<Location> task) {
                 if (task.isSuccessful()) {
-                    Location mLocation = task.getResult();
+                    final Location mLocation = task.getResult();
                     moveCam(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), ZOOM);
+                    imgMyLocation.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            moveCam(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), ZOOM);
+                        }
+                    });
                 } else {
                     Toast.makeText(MapActivity.this, "Could not get device's location", Toast.LENGTH_SHORT).show();
                 }
@@ -148,6 +156,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         if (locationList.size() > 0) {
                             Address address = locationList.get(0);
                             Log.e("faizan", address.toString());
+                            moveCam(new LatLng(address.getLatitude(), address.getLongitude()), ZOOM, address.getAddressLine(0));
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -160,5 +169,17 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private void initViews() {
         edtSearch = findViewById(R.id.edtLoicationName);
         imgSearch = findViewById(R.id.imgSearch);
+        imgMyLocation = findViewById(R.id.imgMyLocation);
+    }
+
+    private void moveCam(LatLng latlng, float zoom, String title) {
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latlng, zoom));
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        mMap.setMyLocationEnabled(true);
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
+        MarkerOptions markerOptions = new MarkerOptions().position(latlng).title(title);
+        mMap.addMarker(markerOptions);
     }
 }
