@@ -22,6 +22,7 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.GeoDataClient;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -37,7 +38,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener {
+public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     boolean permission_granted = false;
     private static int PERMISSION_REQUEST_CODE = 06;
@@ -47,9 +48,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private String[] mPermission = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
     private FusedLocationProviderClient mlProvider;
     private static float ZOOM = 15f;
-    private EditText edtSearch;
+    private AutoCompleteTextView edtSearch;
     private ImageView imgSearch;
     private ImageView imgMyLocation;
+    private PlaceAutocompleteAdapter placeAutocompleteAdapter;
+    private GeoDataClient geoDataClient;
+    private LatLngBounds latLngBounds = new LatLngBounds(new LatLng(-40, -168), new LatLng(71, 136));
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -57,6 +61,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         setContentView(R.layout.map_activity);
         initViews();
         permissionCheck();
+        geoDataClient = Places.getGeoDataClient(MapActivity.this, null);
+        placeAutocompleteAdapter = new PlaceAutocompleteAdapter(MapActivity.this, geoDataClient, latLngBounds, null);
+        edtSearch.setAdapter(placeAutocompleteAdapter);
     }
 
     private void permissionCheck() {
@@ -184,10 +191,5 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mMap.getUiSettings().setMyLocationButtonEnabled(false);
         MarkerOptions markerOptions = new MarkerOptions().position(latlng).title(title);
         mMap.addMarker(markerOptions);
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
     }
 }
