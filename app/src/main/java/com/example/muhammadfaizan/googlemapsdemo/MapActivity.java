@@ -18,6 +18,12 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -33,6 +39,10 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,9 +61,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private AutoCompleteTextView edtSearch;
     private ImageView imgSearch;
     private ImageView imgMyLocation;
+    private ImageView imgHospital;
+    private ImageView imgRestaurant;
     private PlaceAutocompleteAdapter placeAutocompleteAdapter;
     private GeoDataClient geoDataClient;
     private LatLngBounds latLngBounds = new LatLngBounds(new LatLng(-40, -168), new LatLng(71, 136));
+    private LatLng myPosition;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -64,6 +77,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         geoDataClient = Places.getGeoDataClient(MapActivity.this, null);
         placeAutocompleteAdapter = new PlaceAutocompleteAdapter(MapActivity.this, geoDataClient, latLngBounds, null);
         edtSearch.setAdapter(placeAutocompleteAdapter);
+        nearbyPlacesListeners();
+        goToMyLocation();
     }
 
     private void permissionCheck() {
@@ -124,13 +139,14 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             public void onComplete(@NonNull Task<Location> task) {
                 if (task.isSuccessful()) {
                     final Location mLocation = task.getResult();
+                    myPosition = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
                     moveCam(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), ZOOM);
-                    imgMyLocation.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            moveCam(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), ZOOM);
-                        }
-                    });
+//                    imgMyLocation.setOnClickListener(new View.OnClickListener() {
+//                        @Override
+//                        public void onClick(View view) {
+//                            moveCam(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), ZOOM);
+//                        }
+//                    });
                 } else {
                     Toast.makeText(MapActivity.this, "Could not get device's location", Toast.LENGTH_SHORT).show();
                 }
@@ -180,6 +196,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         edtSearch = findViewById(R.id.edtLoicationName);
         imgSearch = findViewById(R.id.imgSearch);
         imgMyLocation = findViewById(R.id.imgMyLocation);
+        imgHospital = findViewById(R.id.img_hospital);
+        imgRestaurant = findViewById(R.id.img_restaurant);
     }
 
     private void moveCam(LatLng latlng, float zoom, String title) {
@@ -190,6 +208,68 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(false);
         MarkerOptions markerOptions = new MarkerOptions().position(latlng).title(title);
+        mMap.addMarker(markerOptions);
+    }
+
+    private void nearbyPlacesListeners() {
+        imgRestaurant.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                StringBuilder url = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
+                url.append("location=" + myPosition.latitude + "," + myPosition.longitude);
+                url.append("&radius=" + 6000);
+                url.append("&type=restaurant");
+                url.append("&key=AIzaSyBSex7To4yqpwbR0cqV1i4N0cmRlcMWAls");
+                mMap.clear();
+
+                RequestQueue requestQueue = Volley.newRequestQueue(MapActivity.this);
+                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url.toString(), null, new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            JSONArray jsonArray = response.getJSONArray("results");
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i).getJSONObject("geometry").getJSONObject("location");
+                                String place_name = String.valueOf(jsonArray.getJSONObject(i).get("name"));
+                                String place_vicinity = String.valueOf(jsonArray.getJSONObject(i).get("vicinity"));
+                                setNearbyMarkers(new LatLng(jsonObject.getDouble("lat"), jsonObject.getDouble("lng")), place_name + ", " + place_vicinity);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(MapActivity.this, error.getMessage(), Toast.LENGTH_LONG).show();
+                        Log.e("response", error.toString());
+                    }
+                });
+
+                requestQueue.add(jsonObjectRequest);
+            }
+        });
+
+        imgHospital.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+            }
+        });
+    }
+
+    private void goToMyLocation() {
+        imgMyLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                getDeviceLocation();
+            }
+        });
+    }
+
+    private void setNearbyMarkers(LatLng latLng, String info) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myPosition, 12f));
+        MarkerOptions markerOptions = new MarkerOptions().title(info).position(latLng);
         mMap.addMarker(markerOptions);
     }
 }
