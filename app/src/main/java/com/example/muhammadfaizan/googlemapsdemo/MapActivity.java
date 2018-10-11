@@ -61,6 +61,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private ImageView imgHospital;
     private ImageView imgRestaurant;
     private ImageView imgLocalAtm;
+    private ImageView imgClearMap;
     private PlaceAutocompleteAdapter placeAutocompleteAdapter;
     private GeoDataClient geoDataClient;
     private LatLngBounds latLngBounds = new LatLngBounds(new LatLng(-40, -168), new LatLng(71, 136));
@@ -77,6 +78,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         edtSearch.setAdapter(placeAutocompleteAdapter);
         setNearbyPlacesListeners();
         goToMyLocation();
+        setClearButtonListener();
     }
 
     private void permissionCheck() {
@@ -197,6 +199,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         imgHospital = findViewById(R.id.img_hospital);
         imgRestaurant = findViewById(R.id.img_restaurant);
         imgLocalAtm = findViewById(R.id.img_local_atm);
+        imgClearMap = findViewById(R.id.img_clear_map);
     }
 
     private void moveCam(LatLng latlng, float zoom, String title) {
@@ -284,5 +287,15 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         });
 
         requestQueue.add(jsonObjectRequest);
+    }
+
+    private void setClearButtonListener() {
+        imgClearMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mMap.clear();
+                moveCam(myPosition, ZOOM);
+            }
+        });
     }
 }
