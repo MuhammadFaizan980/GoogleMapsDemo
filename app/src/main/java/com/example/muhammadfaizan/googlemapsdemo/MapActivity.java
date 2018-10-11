@@ -295,6 +295,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             public void onClick(View view) {
                 mMap.clear();
                 moveCam(myPosition, ZOOM);
+                Toast.makeText(MapActivity.this, "Map cleared", Toast.LENGTH_SHORT).show();
             }
         });
     }
