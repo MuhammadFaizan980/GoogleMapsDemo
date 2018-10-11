@@ -14,7 +14,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.AutoCompleteTextView;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -24,8 +23,6 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.GeoDataClient;
@@ -63,6 +60,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private ImageView imgMyLocation;
     private ImageView imgHospital;
     private ImageView imgRestaurant;
+    private ImageView imgLocalAtm;
     private PlaceAutocompleteAdapter placeAutocompleteAdapter;
     private GeoDataClient geoDataClient;
     private LatLngBounds latLngBounds = new LatLngBounds(new LatLng(-40, -168), new LatLng(71, 136));
@@ -77,7 +75,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         geoDataClient = Places.getGeoDataClient(MapActivity.this, null);
         placeAutocompleteAdapter = new PlaceAutocompleteAdapter(MapActivity.this, geoDataClient, latLngBounds, null);
         edtSearch.setAdapter(placeAutocompleteAdapter);
-        nearbyPlacesListeners();
+        setNearbyPlacesListeners();
         goToMyLocation();
     }
 
@@ -198,6 +196,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         imgMyLocation = findViewById(R.id.imgMyLocation);
         imgHospital = findViewById(R.id.img_hospital);
         imgRestaurant = findViewById(R.id.img_restaurant);
+        imgLocalAtm = findViewById(R.id.img_local_atm);
     }
 
     private void moveCam(LatLng latlng, float zoom, String title) {
@@ -211,49 +210,28 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mMap.addMarker(markerOptions);
     }
 
-    private void nearbyPlacesListeners() {
+    private void setNearbyPlacesListeners() {
         imgRestaurant.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                StringBuilder url = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
-                url.append("location=" + myPosition.latitude + "," + myPosition.longitude);
-                url.append("&radius=" + 6000);
-                url.append("&type=restaurant");
-                url.append("&key=AIzaSyBSex7To4yqpwbR0cqV1i4N0cmRlcMWAls");
                 mMap.clear();
-
-                RequestQueue requestQueue = Volley.newRequestQueue(MapActivity.this);
-                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url.toString(), null, new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        try {
-                            JSONArray jsonArray = response.getJSONArray("results");
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i).getJSONObject("geometry").getJSONObject("location");
-                                String place_name = String.valueOf(jsonArray.getJSONObject(i).get("name"));
-                                String place_vicinity = String.valueOf(jsonArray.getJSONObject(i).get("vicinity"));
-                                setNearbyMarkers(new LatLng(jsonObject.getDouble("lat"), jsonObject.getDouble("lng")), place_name + ", " + place_vicinity);
-                            }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(MapActivity.this, error.getMessage(), Toast.LENGTH_LONG).show();
-                        Log.e("response", error.toString());
-                    }
-                });
-
-                requestQueue.add(jsonObjectRequest);
+                getNearbyPlaces("restaurant");
             }
         });
 
         imgHospital.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                mMap.clear();
+                getNearbyPlaces("hospital");
+            }
+        });
 
+        imgLocalAtm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mMap.clear();
+                getNearbyPlaces("atm");
             }
         });
     }
@@ -271,5 +249,40 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myPosition, 12f));
         MarkerOptions markerOptions = new MarkerOptions().title(info).position(latLng);
         mMap.addMarker(markerOptions);
+    }
+
+    private void getNearbyPlaces(String title) {
+        StringBuilder url = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
+        url.append("location=" + myPosition.latitude + "," + myPosition.longitude);
+        url.append("&radius=" + 6000);
+        url.append("&type=" + title);
+        url.append("&key=AIzaSyBSex7To4yqpwbR0cqV1i4N0cmRlcMWAls");
+
+
+        RequestQueue requestQueue = Volley.newRequestQueue(MapActivity.this);
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url.toString(), null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                try {
+                    JSONArray jsonArray = response.getJSONArray("results");
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i).getJSONObject("geometry").getJSONObject("location");
+                        String place_name = String.valueOf(jsonArray.getJSONObject(i).get("name"));
+                        String place_vicinity = String.valueOf(jsonArray.getJSONObject(i).get("vicinity"));
+                        setNearbyMarkers(new LatLng(jsonObject.getDouble("lat"), jsonObject.getDouble("lng")), place_name + ", " + place_vicinity);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(MapActivity.this, error.getMessage(), Toast.LENGTH_LONG).show();
+                Log.e("response", error.toString());
+            }
+        });
+
+        requestQueue.add(jsonObjectRequest);
     }
 }
