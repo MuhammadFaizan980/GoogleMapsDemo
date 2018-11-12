@@ -1,15 +1,19 @@
 package com.example.muhammadfaizan.googlemapsdemo;
 
 import android.Manifest;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -71,14 +75,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.map_activity);
-        initViews();
-        permissionCheck();
-        geoDataClient = Places.getGeoDataClient(MapActivity.this, null);
-        placeAutocompleteAdapter = new PlaceAutocompleteAdapter(MapActivity.this, geoDataClient, latLngBounds, null);
-        edtSearch.setAdapter(placeAutocompleteAdapter);
-        setNearbyPlacesListeners();
-        goToMyLocation();
-        setClearButtonListener();
+        checkNetwork();
     }
 
     private void permissionCheck() {
@@ -141,12 +138,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     final Location mLocation = task.getResult();
                     myPosition = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
                     moveCam(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), ZOOM);
-//                    imgMyLocation.setOnClickListener(new View.OnClickListener() {
-//                        @Override
-//                        public void onClick(View view) {
-//                            moveCam(new LatLng(mLocation.getLatitude(), mLocation.getLongitude()), ZOOM);
-//                        }
-//                    });
                 } else {
                     Toast.makeText(MapActivity.this, "Could not get device's location", Toast.LENGTH_SHORT).show();
                 }
@@ -298,5 +289,34 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 Toast.makeText(MapActivity.this, "Map cleared", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void checkNetwork() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) MapActivity.this.getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        if (networkInfo != null && networkInfo.isConnectedOrConnecting()) {
+            initViews();
+            permissionCheck();
+            geoDataClient = Places.getGeoDataClient(MapActivity.this, null);
+            placeAutocompleteAdapter = new PlaceAutocompleteAdapter(MapActivity.this, geoDataClient, latLngBounds, null);
+            edtSearch.setAdapter(placeAutocompleteAdapter);
+            setNearbyPlacesListeners();
+            goToMyLocation();
+            setClearButtonListener();
+        } else {
+            final AlertDialog.Builder dialog = new AlertDialog.Builder(MapActivity.this);
+            dialog.setTitle("Warning!");
+            dialog.setMessage("You are not connected to internet, application is closing");
+            dialog.setCancelable(false);
+            dialog.setPositiveButton("Close", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    dialogInterface.cancel();
+                    MapActivity.this.finish();
+                }
+            });
+
+            dialog.show();
+        }
     }
 }
